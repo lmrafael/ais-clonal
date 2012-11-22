@@ -8,6 +8,7 @@ public class Main {
 		
 		ArrayList<BankStatement> bankStatements = new ArrayList<BankStatement>();
 		bankStatements.add(File.read("Bank Statement.txt"));
+		//System.out.println(bankStatements.get(0).toString());
 		Train.start(bankStatements);
 		//	wait until (an e-mail arrives or a user action is intercepted)
 		//	ag - convert e-mail into antigen
