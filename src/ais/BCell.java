@@ -7,6 +7,7 @@ public class BCell {
 	private double 				value;
 	private ArrayList<String> 	description;
 	private String 				country;
+	private int					stimulation;
 	
 	public BCell() {
 		this.description = new ArrayList<String>();
@@ -34,5 +35,13 @@ public class BCell {
 
 	public void setCountry(String country) {
 		this.country = country;
+	}
+
+	public int getStimulation() {
+		return stimulation;
+	}
+
+	public void setStimulation(int stimulation) {
+		this.stimulation = stimulation;
 	}
 }
