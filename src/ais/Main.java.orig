@@ -1,0 +1,171 @@
+package ais;
+
+import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.FileInputStream;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Random;
+
+public class Main {
+
+	private static final int 	INITIAL_MEMORY_CELLS 		= 10;
+	private static final double AFFINITY_THRESHOLD 			= 10;
+	private static final double CLASSIFICATION_THRESHOLD 	= 10;
+	private static final int 	NEWS_STIMULATION 			= 10;
+	private static final int 	MEMORY_STIMULATION 			= 10;
+	private static final double CLONING_RATE 				= 10;
+	private static final double MUTATION_RATE 				= 10;
+	
+	private static ArrayList<BCell> newBCells = new ArrayList<BCell>();
+	private static ArrayList<BCell> memoryBCells = new ArrayList<BCell>();
+	
+	public static void main(String[] args) {
+		
+		ArrayList<BankStatement> bankStatements = new ArrayList<BankStatement>();
+<<<<<<< HEAD
+		bankStatements.add(read("Bank Statement.txt"));
+		train(bankStatements);
+=======
+		bankStatements.add(File.read("Bank Statement.txt"));
+		//System.out.println(bankStatements.get(0).toString());
+		Train.start(bankStatements);
+>>>>>>> 9b24a7d15520318bb4fec0b0abd0f446134d0501
+		//	wait until (an e-mail arrives or a user action is intercepted)
+		//	ag - convert e-mail into antigen
+		//	IF(ag requires classification)
+		//	classify(ag)
+		//	IF(ag classified as uninteresting)
+		//	move ag into user accessible storage
+		//	ELSE
+		//	allow e-mail to pass through
+		//	IF(user has given feedback on ag)
+		//	update_population(ag)
+
+	}
+	
+	public static void train(ArrayList<BankStatement> bankStatements){
+		for (BankStatement bankStatement : bankStatements) {
+			for (Expense expense : bankStatement.getExpenses()) {
+				BCell bCell = new BCell();
+				bCell.setValue(Double.parseDouble(expense.getValue()));
+				String[] descriptionSplit = expense.getDescription().split(";");
+				ArrayList<String> descriptionList = new ArrayList<String>();
+				for (int i = 0; i < descriptionSplit.length; i++) {
+					descriptionList.add(descriptionSplit[i]);
+				}
+				bCell.setDescription(descriptionList);
+				bCell.setCountry(expense.getCountry());
+				bCell.setStimulation(NEWS_STIMULATION);
+				newBCells.add(bCell);
+				}		
+		}
+		for (int i = 0; i < INITIAL_MEMORY_CELLS; i++) {
+			BCell promotedBCell = newBCells.get(i);
+			promotedBCell.setStimulation(MEMORY_STIMULATION);
+			memoryBCells.add(promotedBCell);
+			newBCells.remove(i);
+		}
+		for (BCell newBCell : newBCells) {
+			for (BCell memoryBCell : memoryBCells) {
+				if(measureAffinity(memoryBCell, newBCell) > AFFINITY_THRESHOLD){
+					ArrayList<BCell> clones = clone_mutate(memoryBCell,newBCell);
+					for (BCell clone : clones) {
+						if(measureAffinity(clone, newBCell) > measureAffinity(memoryBCell, newBCell)){
+						newBCells.add(clone);
+						}
+					}
+				}
+			}			
+		}
+	}
+	
+	public static double measureAffinity(BCell bCell1, BCell bCell2){
+		
+		double country = 0;
+		if(bCell1.getCountry().equals(bCell2.getCountry())){
+			country = 1;
+		}
+		
+		double bigger = Math.max(bCell1.getValue(), bCell2.getValue());
+		double smaller = Math.min(bCell1.getValue(), bCell2.getValue());		
+		double value = bigger - smaller;
+		value = value / smaller;
+			
+		double description;
+		ArrayList<String> biggerDescription;
+		ArrayList<String> smallerDescription;
+		if (bCell1.getDescription().size() < bCell2.getDescription().size()){
+			biggerDescription = bCell2.getDescription();
+			smallerDescription = bCell1.getDescription();			
+		} else {
+			biggerDescription = bCell1.getDescription();
+			smallerDescription = bCell2.getDescription();	
+		}
+		int count = 0;
+		for(String wordBigger:biggerDescription){
+			for(String wordSmaller:smallerDescription)
+				if (wordSmaller.equals(wordBigger)){
+					count++;
+					break;
+				}
+		}
+		description =  count/smallerDescription.size();
+		
+		return country + value + description;
+	}
+	
+	public static ArrayList<BCell> clone_mutate(BCell bCell1, BCell bCell2){
+		double affinity = measureAffinity(bCell1, bCell2);
+		ArrayList<BCell> clones = new ArrayList<BCell>();
+		int numClones = (int) Math.round(affinity * CLONING_RATE);
+		int numMutate = (int) Math.round((1-affinity)* /*bc’s feature vector length * */  MUTATION_RATE);
+		for (int i = 0; i < numClones; i++) {
+			BCell clone = bCell1;
+			for (int j = 0; j < numMutate; j++) {
+				int p; // = a random point in bcx’s feature vector
+				String w // = a random word from the appropriate gene library replace word in bcx’s feature vector at location p with w
+			}
+			// bcx’s stimulation level ← Ksb
+			clones.add(clone);
+		}
+		return clones;
+	}
+	
+	public static boolean classify(BCell antigen){
+		ArrayList<BCell> all = new ArrayList<BCell>();
+		all.addAll(memoryBCells);
+		all.addAll(newBCells);
+		for (BCell bCell : all)
+		{
+			if(measureAffinity(antigen, bCell) > CLASSIFICATION_THRESHOLD){
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	public static BankStatement read(String file){
+		BankStatement bStatement = new BankStatement();
+		try{
+			FileInputStream fstream = new FileInputStream(file);
+			DataInputStream in = new DataInputStream(fstream);
+			BufferedReader br = new BufferedReader(new InputStreamReader(in));
+			String strLine;
+
+			while ((strLine = br.readLine()) != null)   {
+				String[] strings = strLine.split(";");  
+				Expense expense = new Expense();
+				expense.setValue(strings[0]);
+				expense.setDescription(strings[1]);
+				expense.setCountry(strings[2]);
+				bStatement.addExpense(expense);
+			}
+
+			in.close();
+		} catch (Exception e){
+			System.err.println("Error: " + e.getMessage());
+		}
+		return bStatement;
+	}
+}
