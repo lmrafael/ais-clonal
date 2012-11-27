@@ -11,6 +11,7 @@ public class BCell {
 	
 	public BCell() {
 		this.description = new ArrayList<String>();
+		this.stimulation = 0;
 	}
 	
 	public double getValue() {

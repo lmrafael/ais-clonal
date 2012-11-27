@@ -2,8 +2,10 @@ package ais;
 
 import java.util.ArrayList;
 
-public class BankStatement {
+public class BankStatement extends ArrayList<Expense>{
 	
+	private static final long serialVersionUID = 7554380207548824421L;
+
 	ArrayList<Expense> expenses;
 	
 	public BankStatement() {

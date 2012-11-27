@@ -7,8 +7,6 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Random;
 
-import com.sun.xml.internal.ws.api.ha.StickyFeature;
-
 public class Main {
 
 	private static final int 	INITIAL_MEMORY_CELLS 		= 10;
@@ -19,42 +17,47 @@ public class Main {
 	private static final double CLONING_RATE 				= 10;
 	private static final double MUTATION_RATE 				= 10;
 	
-	public static String newExpensePath = null;
+	private static ArrayList<BCell> newBCells = new ArrayList<BCell>();
+	private static ArrayList<BCell> memoryBCells = new ArrayList<BCell>();
 	
-	private static ArrayList<BCell> newBCells 		= new ArrayList<BCell>();
-	private static ArrayList<BCell> memoryBCells 	= new ArrayList<BCell>();
-	private static ArrayList<BCell> toClassify 		= new ArrayList<BCell>();
-	private static ArrayList<BCell> wrong 			= new ArrayList<BCell>();
-	
-
 	public static void main(String[] args) {
 		
 		ArrayList<BankStatement> bankStatements = new ArrayList<BankStatement>();
+<<<<<<< HEAD
 		bankStatements.add(read("Bank Statement.txt"));
 		train(bankStatements);
-		while(true){
-			if(newExpensePath != null){
-				BankStatement newStatement = read(newExpensePath);
-				Expense newExpense = newStatement.get(0);
-				BCell antigen = convert(newExpense);
-				if (classify(antigen) == false){
-					toClassify.add(antigen);
-				}				
-			}
-			for (BCell antigen : toClassify) {
-				if(antigen.getStimulation() > 0){
-					updatePopulation(antigen);
-					wrong.add(antigen);
-					toClassify.remove(antigen);
-				}
-			}
-		}
+=======
+		bankStatements.add(File.read("Bank Statement.txt"));
+		//System.out.println(bankStatements.get(0).toString());
+		Train.start(bankStatements);
+>>>>>>> 9b24a7d15520318bb4fec0b0abd0f446134d0501
+		//	wait until (an e-mail arrives or a user action is intercepted)
+		//	ag - convert e-mail into antigen
+		//	IF(ag requires classification)
+		//	classify(ag)
+		//	IF(ag classified as uninteresting)
+		//	move ag into user accessible storage
+		//	ELSE
+		//	allow e-mail to pass through
+		//	IF(user has given feedback on ag)
+		//	update_population(ag)
+
 	}
 	
 	public static void train(ArrayList<BankStatement> bankStatements){
 		for (BankStatement bankStatement : bankStatements) {
 			for (Expense expense : bankStatement.getExpenses()) {
-				newBCells.add(convert(expense));
+				BCell bCell = new BCell();
+				bCell.setValue(Double.parseDouble(expense.getValue()));
+				String[] descriptionSplit = expense.getDescription().split(";");
+				ArrayList<String> descriptionList = new ArrayList<String>();
+				for (int i = 0; i < descriptionSplit.length; i++) {
+					descriptionList.add(descriptionSplit[i]);
+				}
+				bCell.setDescription(descriptionList);
+				bCell.setCountry(expense.getCountry());
+				bCell.setStimulation(NEWS_STIMULATION);
+				newBCells.add(bCell);
 				}		
 		}
 		for (int i = 0; i < INITIAL_MEMORY_CELLS; i++) {
@@ -76,20 +79,6 @@ public class Main {
 			}			
 		}
 	}
-
-	private static BCell convert(Expense expense) {
-		BCell bCell = new BCell();
-		bCell.setValue(Double.parseDouble(expense.getValue()));
-		String[] descriptionSplit = expense.getDescription().split(";");
-		ArrayList<String> descriptionList = new ArrayList<String>();
-		for (int i = 0; i < descriptionSplit.length; i++) {
-			descriptionList.add(descriptionSplit[i]);
-		}
-		bCell.setDescription(descriptionList);
-		bCell.setCountry(expense.getCountry());
-		bCell.setStimulation(NEWS_STIMULATION);
-		return bCell;
-	}	
 	
 	public static double measureAffinity(BCell bCell1, BCell bCell2){
 		
@@ -143,7 +132,6 @@ public class Main {
 		return clones;
 	}
 	
-	//true=correta
 	public static boolean classify(BCell antigen){
 		ArrayList<BCell> all = new ArrayList<BCell>();
 		all.addAll(memoryBCells);
@@ -155,47 +143,6 @@ public class Main {
 			}
 		}
 		return false;
-	}
-	
-	public static void updatePopulation(BCell antigen){
-		if(antigen.getStimulation() == 2){
-			double bestAffinity = 0;
-			BCell bestNewBCell = null;
-			for (BCell newBCell : newBCells) {
-				double affinity = measureAffinity(newBCell, antigen);
-				if(affinity > AFFINITY_THRESHOLD){
-					newBCell.setStimulation(newBCell.getStimulation()+1);
-				}
-				if(affinity > bestAffinity){
-					bestAffinity = affinity;
-					bestNewBCell = newBCell;
-				}
-			}
-			ArrayList<BCell> clones = clone_mutate(bestNewBCell, antigen);
-			newBCells.addAll(clones);
-			bestAffinity = 0;
-			for (BCell newBCell : newBCells) {
-				double affinity = measureAffinity(newBCell, antigen);
-				if(affinity > bestAffinity){
-					bestAffinity = affinity;
-					bestNewBCell = newBCell;
-				}
-			}
-			bestAffinity = 0;
-			BCell bestMemoryBCell = null;
-			for (BCell memoryBCell : memoryBCells) {
-				double affinity = measureAffinity(memoryBCell, antigen);
-				if(affinity > bestAffinity){
-					bestAffinity = affinity;
-					bestMemoryBCell = memoryBCell;
-				}
-			}
-			if(measureAffinity(bestNewBCell, antigen) > measureAffinity(bestMemoryBCell, antigen)){
-				//
-			}
-		} else {
-			
-		}
 	}
 	
 	public static BankStatement read(String file){
