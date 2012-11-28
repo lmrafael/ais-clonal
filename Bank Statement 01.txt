@@ -1,0 +1,11 @@
+1000.00;Wallmart;Brasil
+500.90;Submarino;Brasil
+10.80;Burger King;Brasil
+21.00;Buongustaio;Brasil
+300.00;Tam;Brasil
+25.00;MC Donalds;Brasil
+19.00;Quanto Prima;Brasil
+12.80;Burger King;Brasil
+22.00;Quanto Prima;Brasil
+18.00;Quanto Prima;Brasil
+23.00;Bonaparte;Brasil
