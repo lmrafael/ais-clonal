@@ -5,14 +5,12 @@ import java.io.DataInputStream;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.Random;
-
-import com.sun.xml.internal.ws.api.ha.StickyFeature;
+import java.util.Scanner;
 
 public class Main {
 
-	private static final int 	INITIAL_MEMORY_CELLS 		= 100;
-	private static final double AFFINITY_THRESHOLD 			= 0.7;
+	private static final int 	INITIAL_MEMORY_CELLS 		= 4;
+	private static final double AFFINITY_THRESHOLD 			= 0.55;
 	private static final double CLASSIFICATION_THRESHOLD 	= 0.6;
 	private static final int 	NEWS_STIMULATION 			= 10;
 	private static final int 	MEMORY_STIMULATION 			= 10;
@@ -21,63 +19,77 @@ public class Main {
 	
 	public static String newExpensePath = null;
 	
-	private static ArrayList<BCell> newBCells 		= new ArrayList<BCell>();
-	private static ArrayList<BCell> memoryBCells 	= new ArrayList<BCell>();
-	private static ArrayList<BCell> toClassify 		= new ArrayList<BCell>();
-	private static ArrayList<BCell> wrong 			= new ArrayList<BCell>();
+	private static ArrayList<BCell> newBCells 			= new ArrayList<BCell>();
+	private static ArrayList<BCell> memoryBCells 		= new ArrayList<BCell>();
+	private static ArrayList<BCell> toClassify 			= new ArrayList<BCell>();
+	private static ArrayList<BCell> classified 			= new ArrayList<BCell>();
+	private static ArrayList<BCell> wrong 				= new ArrayList<BCell>();
 	
+	private static ArrayList<String> descriptionsLib	= new ArrayList<String>();	
+	private static ArrayList<String> countriesLib		= new ArrayList<String>();
 
 	public static void main(String[] args) {
 		/*Le todas as minhas faturas e poe num array de faturas*/
 		ArrayList<BankStatement> bankStatements = new ArrayList<BankStatement>();
-		bankStatements.add(read("Bank Statement.txt"));
+		bankStatements.add(read("Bank Statement 01.txt"));
+//		bankStatements.add(read("Bank Statement 02.txt"));
+//		bankStatements.add(read("Bank Statement 03.txt"));
+//		bankStatements.add(read("Bank Statement 04.txt"));
+//		bankStatements.add(read("Bank Statement 05.txt"));
+//		bankStatements.add(read("Bank Statement 06.txt"));
 		/*Inicia o treinamento do meu sistema imunologico*/
 		train(bankStatements);
-		
-		/*Inicia uma Thread pra ficar esperando novas cobranças*/
-		new Thread() {
-			@Override
-			public void run() {
-				while(true){
-					/*Recebe uma nova cobrança converte em antigeno e classifica*/
-					if(newExpensePath != null){
-						BankStatement newStatement = read(newExpensePath);
-						Expense newExpense = newStatement.get(0);
-						BCell antigen = convert(newExpense);
-						antigen.setStimulation(0);
-						/*Caso tenha sido classificada como falsa coloca num array para esperar validação*/
-						if (classify(antigen) == false){
-							toClassify.add(antigen);
-						}				
-					}
-					newExpensePath = null;
+
+		while (true){
+			while(toClassify == null || toClassify.isEmpty()){
+				newExpensePath = "New Bank Statement.txt";
+//				message("Digite o path do txt com a expense...");
+//				Scanner in = new Scanner(System.in);
+//				newExpensePath = in.nextLine();
+//			    in.close();   
+			    /*Recebe uma nova cobrança converte em antigeno e classifica*/
+				if(newExpensePath != null && newExpensePath != ""){         
+					BankStatement newStatement = read(newExpensePath);
+					Expense newExpense = newStatement.getExpenses().get(0);
+					BCell antigen = convert(newExpense);
+					antigen.setStimulation(0);
+					/*Caso tenha sido classificada como falsa coloca num array para esperar validação*/
+					if (classify(antigen) == false){
+						toClassify.add(antigen);
+					}				
+				}
+				newExpensePath = null;
+			}
+			int result = 0;
+			for (BCell antigen : toClassify) {
+				message("Classifique o cobrança " + antigen.toString() + " como:");
+				message("1 - Errada");
+				message("2 - Correta");
+				Scanner in = new Scanner(System.in);
+				result = in.nextInt();
+			    in.close();   
+			    //antigen.setStimulation(result);
+			    //classified.add(antigen);
+			    //toClassify.remove(antigen);
+			}
+			for (BCell antigen : classified) {
+				if(antigen.getStimulation() > 0){
+					updatePopulation(antigen);
+					wrong.add(antigen);
+					classified.remove(antigen);
 				}
 			}
-		}.start();
-		
-		/*Inicia uma Thread pra ficar esperando confirmações de classificações*/
-		new Thread() {
-			@Override
-			public void run() {
-				while(true){
-					/*Se Stimulation for != 0 foi validada!*/
-					for (BCell antigen : toClassify) {
-						if(antigen.getStimulation() > 0){
-							updatePopulation(antigen);
-							wrong.add(antigen);
-							toClassify.remove(antigen);
-						}
-					}
-				}
-			}
-		}.start();
+		}
 	}
 	
 	public static void train(ArrayList<BankStatement> bankStatements){
 		/*Converte despesas em novas celulas B*/
 		for (BankStatement bankStatement : bankStatements) {
 			for (Expense expense : bankStatement.getExpenses()) {
-				newBCells.add(convert(expense));
+				BCell bCell = convert(expense);
+				newBCells.add(bCell);
+				descriptionsLib.addAll(bCell.getDescription());
+				countriesLib.add(bCell.getCountry());
 				}		
 		}
 		/*promove um numero determinado de novas celulas B a celulas B de Memoria*/
@@ -88,25 +100,31 @@ public class Main {
 			newBCells.remove(i);
 		}
 		/*Mede a afinidade entre as novas celuas B e as celulas B de Memoria*/
+		message("Calculando afnidade entre celulas novas e de memoria.");
 		for (BCell newBCell : newBCells) {
 			for (BCell memoryBCell : memoryBCells) {
 				if(measureAffinity(memoryBCell, newBCell) > AFFINITY_THRESHOLD){
 					/*Se a afinidade for maior que um valor definido, clona/muta as celulas*/
+					message("Afinidade encontrada, clonando.");
 					ArrayList<BCell> clones = clone_mutate(memoryBCell,newBCell);
+					message(clones.size() + " clones gerados.");
+					int count = 0;
 					for (BCell clone : clones) {
 						/*Adiciona todos os clones com afinidade maiores que as celulas de memoria ao Array de novas celulas B*/
 						if(measureAffinity(clone, newBCell) > measureAffinity(memoryBCell, newBCell)){
-						newBCells.add(clone);
+							count++;
+							newBCells.add(clone);
 						}
 					}
+					message(count + " clones aceitos.");
 				}
-			}			
+			}
 		}
 	}
 
 	/*Mede a afinidade entre duas celulas*/
 	public static double measureAffinity(BCell bCell1, BCell bCell2){
-		
+		//message("Calculando afinidade entre " + bCell1.toString() + " e " + bCell2.toString());
 		double country = 0;
 		if(bCell1.getCountry().equals(bCell2.getCountry())){
 			country = 0.33;
@@ -114,11 +132,11 @@ public class Main {
 		
 		double bigger = Math.max(bCell1.getValue(), bCell2.getValue());
 		double smaller = Math.min(bCell1.getValue(), bCell2.getValue());		
-		double value = ( bigger / smaller )-1;
-		if (value >= 1){
-			value = 0.34;
+		double value = ( bigger / smaller );
+		if (value > 3){
+			value = 0;
 		} else {
-			value = value / 3;
+			value = value / 9;
 		}
 		
 		double description;
@@ -141,10 +159,16 @@ public class Main {
 		}
 		description =  ( count / smallerDescription.size() ) / 3;
 		
-		return country + value + description;
+		double ret = country + value + description;
+		
+		if (ret > 1){
+			ret = 1;
+		}
+		//message("Afinidade: V=" + value + " D=" + description + " C=" + country + "Tot= " + ret);
+		return ret;
 	}
 	
-	/*Clona celulas*/
+	/*Clona e muta uma celula celulas*/
 	public static ArrayList<BCell> clone_mutate(BCell bCell1, BCell bCell2){
 		double affinity = measureAffinity(bCell1, bCell2);
 		ArrayList<BCell> clones = new ArrayList<BCell>();
@@ -153,8 +177,17 @@ public class Main {
 		for (int i = 0; i < numClones; i++) {
 			BCell clone = bCell1;
 			for (int j = 0; j < numMutate; j++) {
+				
 				double value = Math.random() * (clone.getValue()/4);
 				clone.setValue(value);
+		
+				int countryRandom = (int) Math.round(Math.random() * (countriesLib.size()-1));
+				clone.setCountry(countriesLib.get(countryRandom));
+				
+				ArrayList<String> description = clone.getDescription();
+				int cellDescriptionRandom = (int) Math.round(Math.random() * (description.size()-1));
+				int descriptionRandom = (int) Math.round(Math.random() * (descriptionsLib.size()-1));
+				description.set(cellDescriptionRandom, descriptionsLib.get(descriptionRandom));
 			}
 			clone.setStimulation(NEWS_STIMULATION);
 			clones.add(clone);
@@ -168,9 +201,11 @@ public class Main {
 		for (BCell bCell : all)
 		{
 			if(measureAffinity(antigen, bCell) > CLASSIFICATION_THRESHOLD){
+				message(antigen.toString() + " OK"); 
 				return true;
 			}
 		}
+		message(antigen.toString() + " Baaaad"); 
 		return false;
 	}
 
@@ -224,12 +259,16 @@ public class Main {
 					memoryBCell.setStimulation(memoryBCell.getStimulation()-1);
 				}
 			}
+			descriptionsLib.addAll(antigen.getDescription());
+			countriesLib.add(antigen.getCountry());
 		} else {
 			ArrayList<BCell> all = getAllBCells();
 			for (BCell bCell : all) {
 				if (measureAffinity(bCell, antigen) > AFFINITY_THRESHOLD){
 					memoryBCells.remove(bCell);
 					newBCells.remove(bCell);
+					descriptionsLib.removeAll(antigen.getDescription());
+					countriesLib.remove(antigen.getCountry());
 				}
 			}
 		}
@@ -244,7 +283,7 @@ public class Main {
 			}
 		}
 	}
-	
+
 	/*Funcao para ocnverter uma cobranca numa Celula B*/
 	private static BCell convert(Expense expense) {
 		BCell bCell = new BCell();
@@ -283,5 +322,9 @@ public class Main {
 			System.err.println("Error: " + e.getMessage());
 		}
 		return bStatement;
+	}
+	
+	public static void message(String message){
+		System.out.println(message);
 	}
 }

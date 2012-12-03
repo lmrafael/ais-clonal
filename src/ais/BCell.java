@@ -42,7 +42,14 @@ public class BCell {
 		return stimulation;
 	}
 
-	public void setStimulation(int stimulation) {
+	public synchronized void setStimulation(int stimulation) {
 		this.stimulation = stimulation;
+	}
+
+	@Override
+	public String toString() {
+		return String.format(
+				"[%s, %s, %s, %s]",
+				value, description, country, stimulation);
 	}
 }
