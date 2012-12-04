@@ -5,12 +5,13 @@ import java.io.DataInputStream;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Random;
 import java.util.Scanner;
 
 public class Main {
 
 	private static final int 	INITIAL_MEMORY_CELLS 		= 4;
-	private static final double AFFINITY_THRESHOLD 			= 0.55;
+	private static final double AFFINITY_THRESHOLD 			= 0.6;
 	private static final double CLASSIFICATION_THRESHOLD 	= 0.6;
 	private static final int 	NEWS_STIMULATION 			= 10;
 	private static final int 	MEMORY_STIMULATION 			= 10;
@@ -39,7 +40,7 @@ public class Main {
 //		bankStatements.add(read("Bank Statement 06.txt"));
 		/*Inicia o treinamento do meu sistema imunologico*/
 		train(bankStatements);
-
+		Scanner in = new Scanner(System.in); 
 		while (true){
 			while(toClassify == null || toClassify.isEmpty()){
 				newExpensePath = "New Bank Statement.txt";
@@ -60,25 +61,24 @@ public class Main {
 				}
 				newExpensePath = null;
 			}
-			int result = 0;
+			int index = 0;
+			int answer = 0;	
 			for (BCell antigen : toClassify) {
-				message("Classifique o cobrança " + antigen.toString() + " como:");
-				message("1 - Errada");
-				message("2 - Correta");
-				Scanner in = new Scanner(System.in);
-				result = in.nextInt();
-			    in.close();   
-			    //antigen.setStimulation(result);
-			    //classified.add(antigen);
-			    //toClassify.remove(antigen);
+				message("Cobrança " + antigen.toString() + " fora do padrão?");
+				message("0 - Ignorar; 1 - Sim; 2 - Não");
+				answer = in.nextInt();
+			    antigen.setStimulation(answer);
+			    index = toClassify.indexOf(antigen);
+			    classified.add(antigen);
 			}
 			for (BCell antigen : classified) {
+				toClassify.remove(index);
 				if(antigen.getStimulation() > 0){
 					updatePopulation(antigen);
-					wrong.add(antigen);
-					classified.remove(antigen);
 				}
+				index = classified.indexOf(antigen);
 			}
+			classified.remove(index);
 		}
 	}
 	
@@ -100,12 +100,12 @@ public class Main {
 			newBCells.remove(i);
 		}
 		/*Mede a afinidade entre as novas celuas B e as celulas B de Memoria*/
-		message("Calculando afnidade entre celulas novas e de memoria.");
+		message("Calculando afinidade entre TODAS as celulas, novas e de memoria.");
 		for (BCell newBCell : newBCells) {
 			for (BCell memoryBCell : memoryBCells) {
 				if(measureAffinity(memoryBCell, newBCell) > AFFINITY_THRESHOLD){
 					/*Se a afinidade for maior que um valor definido, clona/muta as celulas*/
-					message("Afinidade encontrada, clonando.");
+					message("Afinidade encontrada entre "+memoryBCell+" e "+newBCell+", clonando.");
 					ArrayList<BCell> clones = clone_mutate(memoryBCell,newBCell);
 					message(clones.size() + " clones gerados.");
 					int count = 0;
@@ -164,7 +164,6 @@ public class Main {
 		if (ret > 1){
 			ret = 1;
 		}
-		//message("Afinidade: V=" + value + " D=" + description + " C=" + country + "Tot= " + ret);
 		return ret;
 	}
 	
@@ -174,38 +173,48 @@ public class Main {
 		ArrayList<BCell> clones = new ArrayList<BCell>();
 		int numClones = (int) Math.round(affinity * CLONING_RATE);
 		int numMutate = (int) Math.round((1-affinity)* (bCell1.getDescription().size() + bCell2.getDescription().size()) *  MUTATION_RATE);
+		
 		for (int i = 0; i < numClones; i++) {
-			BCell clone = bCell1;
+			BCell clone = new BCell();
+			clone.setValue(bCell1.getValue());
+			clone.setDescription(bCell1.getDescription());
+			clone.setCountry(bCell1.getCountry());
+			clone.setStimulation(bCell1.getStimulation());
+			ArrayList<String> description = null;
 			for (int j = 0; j < numMutate; j++) {
 				
-				double value = Math.random() * (clone.getValue()/4);
-				clone.setValue(value);
+				double value = getRandom() * (clone.getValue()/4);
+				if(getRandom() > 0.5){
+					clone.setValue(Math.round(clone.getValue() + value));
+				} else {
+					clone.setValue(Math.round(clone.getValue() - value));
+				}
 		
-				int countryRandom = (int) Math.round(Math.random() * (countriesLib.size()-1));
+				int countryRandom = (int) Math.round(getRandom() * (countriesLib.size()-1));
 				clone.setCountry(countriesLib.get(countryRandom));
 				
-				ArrayList<String> description = clone.getDescription();
-				int cellDescriptionRandom = (int) Math.round(Math.random() * (description.size()-1));
-				int descriptionRandom = (int) Math.round(Math.random() * (descriptionsLib.size()-1));
+				description = clone.getDescription();
+				int cellDescriptionRandom = (int) Math.round(getRandom() * (description.size()-1));
+				int descriptionRandom = (int) Math.round(getRandom() * (descriptionsLib.size()-1));
 				description.set(cellDescriptionRandom, descriptionsLib.get(descriptionRandom));
+				clone.setDescription(description);
+				clone.setDescription(description);
 			}
 			clone.setStimulation(NEWS_STIMULATION);
 			clones.add(clone);
 		}
 		return clones;
 	}
-	
+
 	//true=correta
 	public static boolean classify(BCell antigen){
 		ArrayList<BCell> all = getAllBCells();
 		for (BCell bCell : all)
 		{
 			if(measureAffinity(antigen, bCell) > CLASSIFICATION_THRESHOLD){
-				message(antigen.toString() + " OK"); 
 				return true;
 			}
 		}
-		message(antigen.toString() + " Baaaad"); 
 		return false;
 	}
 
@@ -250,7 +259,9 @@ public class Main {
 				}
 			}
 			if(measureAffinity(bestNewBCell, antigen) > measureAffinity(bestMemoryBCell, antigen)){
+				message("s1="+newBCells.size());
 				newBCells.remove(bestNewBCell);
+				message("s2="+newBCells.size());
 				bestNewBCell.setStimulation(MEMORY_STIMULATION);
 				memoryBCells.add(bestNewBCell);
 			}
@@ -269,6 +280,7 @@ public class Main {
 					newBCells.remove(bCell);
 					descriptionsLib.removeAll(antigen.getDescription());
 					countriesLib.remove(antigen.getCountry());
+					classified.remove(antigen);	
 				}
 			}
 		}
@@ -324,7 +336,14 @@ public class Main {
 		return bStatement;
 	}
 	
-	public static void message(String message){
+	public static void message(Object message){
 		System.out.println(message);
+	}
+	
+	private static double getRandom() {
+		Random randomGenerator = new Random();
+		double random = randomGenerator.nextInt(1000);
+		random = random/1000;
+		return random;
 	}
 }

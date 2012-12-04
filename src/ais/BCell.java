@@ -23,11 +23,14 @@ public class BCell {
 	}
 
 	public ArrayList<String> getDescription() {
-		return description;
+		ArrayList<String> retorno = new ArrayList<String>();
+		retorno.addAll(description);
+		return retorno;
 	}
 
 	public void setDescription(ArrayList<String> description) {
-		this.description = description;
+		this.description = new ArrayList<String>();
+		this.description.addAll(description);
 	}
 
 	public String getCountry() {
@@ -42,7 +45,7 @@ public class BCell {
 		return stimulation;
 	}
 
-	public synchronized void setStimulation(int stimulation) {
+	public void setStimulation(int stimulation) {
 		this.stimulation = stimulation;
 	}
 
